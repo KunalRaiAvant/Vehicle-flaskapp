@@ -1,0 +1,124 @@
+<!-- templates/edit_vehicle.html -->
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-md">
+    <h2 class="text-2xl font-bold mb-6">Edit Vehicle</h2>
+    <form method="POST" class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label for="make" class="block text-sm font-medium text-gray-700">Make</label>
+                <input type="text" name="make" id="make" value="{{ vehicle.make }}" required 
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            </div>
+            <div>
+                <label for="model" class="block text-sm font-medium text-gray-700">Model</label>
+                <input type="text" name="model" id="model" value="{{ vehicle.model }}" required 
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            </div>
+            <div>
+                <label for="year" class="block text-sm font-medium text-gray-700">Year</label>
+                <input type="text" name="year" id="year" value="{{ vehicle.year }}" required 
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            </div>
+            <div>
+                <label for="plateNumber" class="block text-sm font-medium text-gray-700">Plate Number</label>
+                <input type="text" name="plateNumber" id="plateNumber" value="{{ vehicle.plate_number }}" required 
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            </div>
+            <div>
+                <label for="color" class="block text-sm font-medium text-gray-700">Color</label>
+                <input type="text" name="color" id="color" value="{{ vehicle.color }}" required 
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <label class="block text-sm font-medium text-gray-700">Document Photo</label>
+            <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                <div class="space-y-1 text-center">
+                    <video id="camera" class="hidden mx-auto"></video>
+                    <canvas id="canvas" class="hidden mx-auto"></canvas>
+                    <img id="photo" class="hidden mx-auto">
+                    <input type="hidden" name="photo_data" id="photo_data">
+                    <div class="flex text-sm text-gray-600">
+                        <button type="button" id="startCamera" 
+                                class="mx-auto px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                            Update Photo
+                        </button>
+                        <button type="button" id="capturePhoto" class="hidden mx-auto px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
+                            Capture
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-end space-x-4">
+            <a href="{{ url_for('dashboard') }}" 
+               class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                Cancel
+            </a>
+            <button type="submit" 
+                    class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+                Update Vehicle
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+let stream;
+const startCamera = document.getElementById('startCamera');
+const capturePhoto = document.getElementById('capturePhoto');
+const video = document.getElementById('camera');
+const canvas = document.getElementById('canvas');
+const photo = document.getElementById('photo');
+const photoData = document.getElementById('photo_data');
+
+console.log("Camera elements initialized", {
+    startCamera: !!startCamera,
+    capturePhoto: !!capturePhoto,
+    video: !!video,
+    canvas: !!canvas,
+    photo: !!photo,
+    photoData: !!photoData
+});
+
+
+startCamera.addEventListener('click', async () => {
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                facingMode: 'environment'
+            } 
+        });
+        video.srcObject = stream;
+        video.classList.remove('hidden');
+        video.play();
+        startCamera.classList.add('hidden');
+        capturePhoto.classList.remove('hidden');
+    } catch (err) {
+        console.error('Error accessing camera:', err);
+        alert('Error accessing camera. Please make sure you have granted camera permissions.');
+    }
+});
+
+capturePhoto.addEventListener('click', () => {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    
+    const imageData = canvas.toDataURL('image/jpeg');
+    photo.src = imageData;
+    photo.classList.remove('hidden');
+    photoData.value = imageData;
+    
+    video.classList.add('hidden');
+    capturePhoto.classList.add('hidden');
+    
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+    }
+});
+</script>
+{% endblock %}
