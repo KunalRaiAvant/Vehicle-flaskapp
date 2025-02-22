@@ -395,36 +395,56 @@ def new_booking():
 @admin_required
 def admin_bookings():
     try:
-        
+        # Create authenticated client with proper headers
+        auth_client = create_client(
+            'https://sbzejrhepdceuyvyvsmy.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNiemVqcmhlcGRjZXV5dnl2c215Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkyMDk5NjAsImV4cCI6MjA1NDc4NTk2MH0.2YaMv5DUYPIUxOEZ8WnoUwepNJAtqvt6i_2AgD34fr8'
+        )
+
+        # Set the auth header manually
+        auth_client.postgrest.auth(session.get('access_token'))
+
+        # First get all bookings with vehicle information
+        bookings_result = auth_client.table('bookings')\
+            .select('*, vehicles(*)')\
+            .execute()
+
+        print("Bookings result:", bookings_result.data)  # Debug print
+
+        # Get user information separately
+        user_ids = [booking['user_id'] for booking in bookings_result.data]
+        user_profiles_result = auth_client.table('user_profiles')\
+            .select('*')\
+            .in_('id', user_ids)\
+            .execute()
+
+        # Create a dictionary for quick user lookup
+        user_profiles = {
+            profile['id']: profile 
+            for profile in user_profiles_result.data
+        } if user_profiles_result.data else {}
 
         # Get all vehicles for the dropdown
-        vehicles_result = supabase.table('vehicles').select('*').execute()
-        
-        bookings_result = supabase.table('bookings')\
-            .select('*, vehicles(*)')\
-            .order('created_at', desc=True)\
-            .execute()
-        print("Bookings result:", bookings_result)  # Debug print
-
-        user_ids = [booking['user_id'] for booking in bookings_result.data]
-        print("User IDs:", user_ids)  # Debug print
-        users_result = supabase.auth.admin.users(user_ids)
-
-        print("Bookings data:", bookings_result.data)  # Debug print
+        vehicles_result = auth_client.table('vehicles').select('*').execute()
 
         # Format the booking data for display
         formatted_bookings = []
         for booking in bookings_result.data:
+            user_profile = user_profiles.get(booking['user_id'], {})
+            vehicle = booking.get('vehicles', {})
+            
             formatted_booking = {
                 'id': booking['id'],
                 'source': booking['source'],
                 'destination': booking['destination'],
-                'booking_date': booking['booking_date'],
-                'status': booking['status'],
-                'amount': booking['amount'],
-                'user_email': booking['user']['email'],
-                'vehicle': booking.get('vehicles', {}),
-                'created_at': booking['created_at']
+                'booking_date': booking.get('booking_date', ''),
+                'status': booking.get('status', 'pending'),
+                'amount': booking.get('amount', 0),
+                'user_name': user_profile.get('full_name', 'Unknown'),
+                'user_phone': user_profile.get('phone', ''),
+                'user_email': user_profile.get('email', ''),
+                'vehicle': vehicle,
+                'created_at': booking.get('created_at', '')
             }
             formatted_bookings.append(formatted_booking)
 
@@ -446,39 +466,48 @@ def admin_bookings():
 @admin_required
 def admin_update_booking(booking_id):
     try:
-        
+        # Get data from form
         action = request.form.get('action')
         
-        if action == 'approve':
-            # Update booking with approval and vehicle assignment
-            update_data = {
-                'status': 'approved',
+        # Create update data based on action
+        update_data = {
+            'status': action
+        }
+        
+        if action == 'approved':
+            update_data.update({
                 'vehicle_id': request.form.get('vehicle_id'),
-                'amount': float(request.form.get('amount')),
-                'approved_at': datetime.utcnow().isoformat(),
-                'approved_by': session['user_id']
-            }
-        elif action == 'reject':
-            update_data = {
-                'status': 'rejected',
-                'rejected_at': datetime.utcnow().isoformat(),
-                'rejected_by': session['user_id']
-            }
-        else:
-            flash('Invalid action', 'error')
-            return redirect(url_for('admin_bookings'))
+                'amount': float(request.form.get('amount', 0)),
+                'approved_by': session['user_id'],
+                'status': 'approved'
+            })
+        elif action == 'rejected':
+            update_data.update({
+                'rejected_by': session['user_id'],
+                'status': 'rejected'
+            })
             
+        # Create authenticated client
+        auth_client = create_client(
+            'https://sbzejrhepdceuyvyvsmy.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNiemVqcmhlcGRjZXV5dnl2c215Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkyMDk5NjAsImV4cCI6MjA1NDc4NTk2MH0.2YaMv5DUYPIUxOEZ8WnoUwepNJAtqvt6i_2AgD34fr8'
+        )
+        auth_client.postgrest.auth(session.get('access_token'))
+        
         # Update the booking
-        supabase.table('bookings')\
+        result = auth_client.table('bookings')\
             .update(update_data)\
             .eq('id', booking_id)\
             .execute()
             
-        flash(f'Booking {action}d successfully!', 'success')
-        
+        if result.data:
+            flash(f'Booking {action} successfully!', 'success')
+        else:
+            flash('Failed to update booking', 'error')
+            
     except Exception as e:
         print(f"Update booking error: {str(e)}")
-        flash('Error updating booking', 'error')
+        flash(f'Error updating booking: {str(e)}', 'error')
         
     return redirect(url_for('admin_bookings'))
 @app.route('/admin/bookings/<uuid:id>', methods=['POST'])
