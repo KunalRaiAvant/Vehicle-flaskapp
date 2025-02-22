@@ -355,13 +355,28 @@ def admin_required(f):
 @login_required
 def bookings():
     try:
-        user_bookings = supabase.table('bookings')\
-            .select('*, vehicles(*)').eq('user_id', session['user_id']).execute()
-        return render_template('bookings.html', bookings=user_bookings.data)
+        auth_client = create_client(
+            'https://sbzejrhepdceuyvyvsmy.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNiemVqcmhlcGRjZXV5dnl2c215Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkyMDk5NjAsImV4cCI6MjA1NDc4NTk2MH0.2YaMv5DUYPIUxOEZ8WnoUwepNJAtqvt6i_2AgD34fr8'
+        )
+        auth_client.postgrest.auth(session.get('access_token'))
+
+        # Get user's bookings with vehicle information
+        bookings_result = auth_client.table('bookings')\
+            .select('*, vehicles(*)')\
+            .eq('user_id', session['user_id'])\
+            .order('created_at', desc=True)\
+            .execute()
+
+        print("User bookings:", bookings_result.data)  # Debug print
+
+        return render_template('bookings.html', 
+                            bookings=bookings_result.data,
+                            is_admin=False)
     except Exception as e:
-        flash('Failed to load bookings')
         print(f"Error loading bookings: {str(e)}")
-        return render_template('bookings.html', bookings=[])
+        flash('Error loading bookings', 'error')
+        return render_template('bookings.html', bookings=[], is_admin=False)
 
 @app.route('/bookings/new', methods=['GET', 'POST'])
 @login_required
@@ -530,22 +545,33 @@ def update_booking(id):
         
     return redirect(url_for('admin_bookings'))
 
-@app.route('/bookings/<uuid:id>/pay', methods=['POST'])
+@app.route('/bookings/<id>/pay', methods=['POST'])  # Changed from booking_id to id
 @login_required
-def pay_booking(id):
+def pay_booking(id):  # Changed parameter name to match
     try:
-        # Here you would integrate with your payment provider
-        # For now, we'll just mark it as paid
-        supabase.table('bookings')\
+        # Create authenticated client
+        auth_client = create_client(
+            'https://sbzejrhepdceuyvyvsmy.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNiemVqcmhlcGRjZXV5dnl2c215Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkyMDk5NjAsImV4cCI6MjA1NDc4NTk2MH0.2YaMv5DUYPIUxOEZ8WnoUwepNJAtqvt6i_2AgD34fr8'
+        )
+        auth_client.postgrest.auth(session.get('access_token'))
+
+        # Update the booking status to paid
+        result = auth_client.table('bookings')\
             .update({'status': 'paid'})\
-            .eq('id', str(id))\
+            .eq('id', id)\
             .eq('user_id', session['user_id'])\
             .execute()
-        flash('Payment processed successfully!')
+
+        if result.data:
+            flash('Payment processed successfully!', 'success')
+        else:
+            flash('Failed to process payment', 'error')
+
     except Exception as e:
-        flash('Payment processing failed')
-        print(f"Error processing payment: {str(e)}")
-        
+        print(f"Payment error: {str(e)}")
+        flash(f'Error processing payment: {str(e)}', 'error')
+
     return redirect(url_for('bookings'))
 
 
