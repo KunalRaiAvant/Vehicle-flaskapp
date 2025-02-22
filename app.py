@@ -45,6 +45,7 @@ def login():
                 "password": password
             })
             session['user_id'] = response.user.id
+            session['access_token'] = response.session.access_token
             return redirect(url_for('dashboard'))
         except Exception as e:
             flash('Invalid credentials')
@@ -86,7 +87,6 @@ def add_vehicle():
             # Get the photo data from the form
             photo_data = request.form.get('photo_data')
             photo_url = None
-            print(f"Photo data: {photo_data}")
 
             if photo_data:
                 # Remove the data:image/jpeg;base64, prefix
@@ -111,7 +111,6 @@ def add_vehicle():
                 photo_url = supabase.storage \
                     .from_('vehicle-documents') \
                     .get_public_url(filename)
-                print(f"Photo URL: {photo_url}")
 
             # Create vehicle data
             vehicle_data = {
@@ -158,7 +157,6 @@ def edit_vehicle(id):
             file_options = {
                      "content-type": "image/jpeg"
                 }
-            print(f"Uploading file: {filename}")
             
             # Upload to Supabase Storage
             storage_response = supabase.storage \
@@ -170,7 +168,6 @@ def edit_vehicle(id):
                 .from_('vehicle-documents') \
                 .get_public_url(filename)
 
-            print(f"Photo URL: {photo_url}")
         vehicle_data = {
             'user_id': session['user_id'],
             'make': request.form['make'],
@@ -188,11 +185,122 @@ def edit_vehicle(id):
             return redirect(url_for('dashboard'))
         except Exception as e:
             flash('Failed to update vehicle')
-            print(f"Error edit vehicle: {str(e)}")
             
     vehicle = supabase.table('vehicles').select("*").eq('id', str(id)).execute()
     print(vehicle)
     return render_template('edit_vehicle.html', vehicle=vehicle.data[0])
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        
+        # Check if user is admin
+        try:
+            user_profile = supabase.table('user_profiles').select('is_admin').eq('id', session['user_id']).execute()
+            if not user_profile.data or not user_profile.data[0]['is_admin']:
+                flash('Admin access required')
+                return redirect(url_for('dashboard'))
+        except Exception as e:
+            print(f"Error checking admin status: {str(e)}")
+            return redirect(url_for('dashboard'))
+            
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/bookings')
+@login_required
+def bookings():
+    try:
+        user_bookings = supabase.table('bookings')\
+            .select('*, vehicles(*)').eq('user_id', session['user_id']).execute()
+        return render_template('bookings.html', bookings=user_bookings.data)
+    except Exception as e:
+        flash('Failed to load bookings')
+        print(f"Error loading bookings: {str(e)}")
+        return render_template('bookings.html', bookings=[])
+
+@app.route('/bookings/new', methods=['GET', 'POST'])
+@login_required
+def new_booking():
+    if request.method == 'POST':
+        try:
+            booking_data = {
+                'user_id': session['user_id'],
+                'source': request.form['source'],
+                'destination': request.form['destination'],
+                'booking_date': request.form['date'],
+                'created_at': datetime.utcnow().isoformat()
+            }
+            supabase.postgrest.auth(session.get('access_token'))
+            result = supabase.table('bookings').insert(booking_data).execute()
+            if result.data:
+                flash('Booking submitted successfully!')
+                return redirect(url_for('bookings'))
+            else:
+                flash('Failed to create booking')
+                return render_template('booking_form.html')
+            return redirect(url_for('bookings'))
+        except Exception as e:
+            flash('Failed to create booking')
+            print(f"Error creating booking: {str(e)}")
+            
+    return render_template('new_booking.html')
+
+@app.route('/admin/bookings')
+@login_required
+@admin_required
+def admin_bookings():
+    try:
+        all_bookings = supabase.table('bookings')\
+            .select('*, vehicles(*), auth.users!bookings_user_id_fkey(email)')\
+            .execute()
+        return render_template('admin_bookings.html', bookings=all_bookings.data)
+    except Exception as e:
+        flash('Failed to load bookings')
+        print(f"Error loading admin bookings: {str(e)}")
+        return render_template('admin_bookings.html', bookings=[])
+
+
+@app.route('/admin/bookings/<uuid:id>', methods=['POST'])
+@login_required
+@admin_required
+def update_booking(id):
+    try:
+        data = request.form
+        update_data = {
+            'status': data.get('status'),
+            'amount': float(data.get('amount', 0)) if data.get('amount') else None,
+            'vehicle_id': data.get('vehicle_id')
+        }
+        
+        supabase.table('bookings').update(update_data).eq('id', str(id)).execute()
+        flash('Booking updated successfully!')
+    except Exception as e:
+        flash('Failed to update booking')
+        print(f"Error updating booking: {str(e)}")
+        
+    return redirect(url_for('admin_bookings'))
+
+@app.route('/bookings/<uuid:id>/pay', methods=['POST'])
+@login_required
+def pay_booking(id):
+    try:
+        # Here you would integrate with your payment provider
+        # For now, we'll just mark it as paid
+        supabase.table('bookings')\
+            .update({'status': 'paid'})\
+            .eq('id', str(id))\
+            .eq('user_id', session['user_id'])\
+            .execute()
+        flash('Payment processed successfully!')
+    except Exception as e:
+        flash('Payment processing failed')
+        print(f"Error processing payment: {str(e)}")
+        
+    return redirect(url_for('bookings'))
+
 
 @app.route('/vehicle/delete/<uuid:id>')
 @login_required
