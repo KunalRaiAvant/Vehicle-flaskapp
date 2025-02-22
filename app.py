@@ -18,6 +18,32 @@ supabase: Client = create_client(
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNiemVqcmhlcGRjZXV5dnl2c215Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkyMDk5NjAsImV4cCI6MjA1NDc4NTk2MH0.2YaMv5DUYPIUxOEZ8WnoUwepNJAtqvt6i_2AgD34fr8'
 )
 
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        
+        try:
+            
+            
+            # Check if user is admin
+            result = supabase.table('user_profiles').select('is_admin')\
+                .eq('id', session['user_id']).execute()
+            print(result)
+            if not result.data or not result.data[0]['is_admin']:
+                flash('Admin access required')
+                return redirect(url_for('dashboard'))
+                
+        except Exception as e:
+            print(f"Admin check error: {str(e)}")
+            return redirect(url_for('dashboard'))
+            
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -25,6 +51,96 @@ def login_required(f):
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function
+
+
+@app.route('/profile', methods=['GET', 'POST'])
+@login_required
+def user_profile():
+    
+    
+    if request.method == 'POST':
+        try:
+            # Update user profile data
+            profile_data = {
+                'full_name': request.form['full_name'],
+                'phone': request.form['phone'],
+                'address': request.form['address']
+            }
+            
+            # Update or create profile
+            result = supabase.table('user_profiles').upsert({
+                'id': session['user_id'],
+                **profile_data
+            }).execute()
+            
+            flash('Profile updated successfully!')
+            return redirect(url_for('user_profile'))
+            
+        except Exception as e:
+            print(f"Profile update error: {str(e)}")
+            flash('Failed to update profile')
+    
+    # Get current profile data
+    try:
+        result = supabase.table('user_profiles').select('*')\
+            .eq('id', session['user_id']).execute()
+        profile = result.data[0] if result.data else {}
+        
+        # Get user email from auth
+        user = supabase.auth.get_user()
+        email = user.user.email if user else ''
+        
+        return render_template('profile.html', profile=profile, email=email)
+    except Exception as e:
+        print(f"Profile fetch error: {str(e)}")
+        return render_template('profile.html', profile={}, email='')
+
+
+@app.route('/admin/users')
+@login_required
+@admin_required
+def admin_users():
+    try:
+        
+        
+        # Get all user profiles with their auth data
+        result = supabase.table('user_profiles').select('*').execute()
+        users = result.data
+        
+        return render_template('admin_users.html', users=users)
+    except Exception as e:
+        print(f"Admin users fetch error: {str(e)}")
+        flash('Failed to load users')
+        return render_template('admin_users.html', users=[])
+
+
+@app.route('/admin/users/<user_id>/toggle-admin', methods=['POST'])
+@login_required
+@admin_required
+def toggle_admin(user_id):
+    try:
+        
+        
+        # Get current admin status
+        result = supabase.table('user_profiles').select('is_admin')\
+            .eq('id', user_id).execute()
+        
+        if result.data:
+            current_status = result.data[0].get('is_admin', False)
+            # Toggle admin status
+            supabase.table('user_profiles').update({
+                'is_admin': not current_status
+            }).eq('id', user_id).execute()
+            
+            flash('User admin status updated successfully!')
+        else:
+            flash('User not found')
+            
+    except Exception as e:
+        print(f"Toggle admin error: {str(e)}")
+        flash('Failed to update user admin status')
+        
+    return redirect(url_for('admin_users'))
 
 @app.route('/')
 def index():
@@ -40,12 +156,23 @@ def login():
         password = request.form['password']
         
         try:
+
+            
             response = supabase.auth.sign_in_with_password({
                 "email": email,
                 "password": password
             })
+
             session['user_id'] = response.user.id
             session['access_token'] = response.session.access_token
+
+            result = supabase.table('user_profiles').select('is_admin')\
+                .eq('id', session['user_id'])\
+                .single()\
+                .execute()
+                
+            # Store admin status in session
+            session['is_admin'] = result.data.get('is_admin', False) if result.data else False
             return redirect(url_for('dashboard'))
         except Exception as e:
             flash('Invalid credentials')
@@ -253,16 +380,90 @@ def new_booking():
 @admin_required
 def admin_bookings():
     try:
-        all_bookings = supabase.table('bookings')\
-            .select('*, vehicles(*), auth.users!bookings_user_id_fkey(email)')\
+        
+
+        # Get all vehicles for the dropdown
+        vehicles_result = supabase.table('vehicles').select('*').execute()
+        
+        # Get all bookings with user and vehicle information
+        bookings_result = supabase.table('bookings')\
+            .select(
+                '*, vehicles(*), profiles:user_id(*), user:user_id(email)'
+            )\
+            .order('created_at', desc=True)\
             .execute()
-        return render_template('admin_bookings.html', bookings=all_bookings.data)
+
+        print("Bookings data:", bookings_result.data)  # Debug print
+
+        # Format the booking data for display
+        formatted_bookings = []
+        for booking in bookings_result.data:
+            formatted_booking = {
+                'id': booking['id'],
+                'source': booking['source'],
+                'destination': booking['destination'],
+                'booking_date': booking['booking_date'],
+                'status': booking['status'],
+                'amount': booking['amount'],
+                'user_email': booking['user']['email'],
+                'vehicle': booking.get('vehicles', {}),
+                'created_at': booking['created_at']
+            }
+            formatted_bookings.append(formatted_booking)
+
+        return render_template(
+            'admin_bookings.html',
+            bookings=formatted_bookings,
+            vehicles=vehicles_result.data
+        )
+
     except Exception as e:
-        flash('Failed to load bookings')
-        print(f"Error loading admin bookings: {str(e)}")
-        return render_template('admin_bookings.html', bookings=[])
+        print(f"Admin bookings error: {str(e)}")
+        flash('Error loading bookings', 'error')
+        return render_template('admin_bookings.html', bookings=[], vehicles=[])
+                            
+    
 
-
+@app.route('/admin/bookings/<booking_id>', methods=['POST'])
+@login_required
+@admin_required
+def admin_update_booking(booking_id):
+    try:
+        
+        action = request.form.get('action')
+        
+        if action == 'approve':
+            # Update booking with approval and vehicle assignment
+            update_data = {
+                'status': 'approved',
+                'vehicle_id': request.form.get('vehicle_id'),
+                'amount': float(request.form.get('amount')),
+                'approved_at': datetime.utcnow().isoformat(),
+                'approved_by': session['user_id']
+            }
+        elif action == 'reject':
+            update_data = {
+                'status': 'rejected',
+                'rejected_at': datetime.utcnow().isoformat(),
+                'rejected_by': session['user_id']
+            }
+        else:
+            flash('Invalid action', 'error')
+            return redirect(url_for('admin_bookings'))
+            
+        # Update the booking
+        supabase.table('bookings')\
+            .update(update_data)\
+            .eq('id', booking_id)\
+            .execute()
+            
+        flash(f'Booking {action}d successfully!', 'success')
+        
+    except Exception as e:
+        print(f"Update booking error: {str(e)}")
+        flash('Error updating booking', 'error')
+        
+    return redirect(url_for('admin_bookings'))
 @app.route('/admin/bookings/<uuid:id>', methods=['POST'])
 @login_required
 @admin_required
