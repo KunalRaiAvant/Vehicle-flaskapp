@@ -7,24 +7,48 @@
     <title>Vehicle Registration System</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100">
-    <nav class="bg-blue-600 p-4 text-white">
-        <div class="container mx-auto flex justify-between items-center">
-            <a href="{{ url_for('dashboard') }}" class="text-xl font-bold">Vehicle Registry</a>
-            {% if 'user_id' in session %}
-            <div class="space-x-4">
-                <a href="{{ url_for('dashboard') }}" class="hover:text-blue-200">Dashboard</a>
-                <a href="{{ url_for('bookings') }}" class="hover:text-blue-200">Bookings</a>
-                
-                <a href="{{ url_for('admin_users') }}" class="hover:text-blue-200">Manage Users</a>
-                <a href="{{ url_for('user_profile') }}" class="hover:text-blue-200">My Profile</a>
-                <a href="{{ url_for('logout') }}" class="hover:text-blue-200">Logout</a>
+<body class="bg-gray-50">
+    <!-- Mobile-friendly navigation -->
+    <nav class="bg-blue-600 text-white">
+        <div class="px-4 py-3">
+            <div class="flex items-center justify-between">
+                <a href="{{ url_for('dashboard') }}" class="text-xl font-bold">Vehicle Registry</a>
+                <button id="menuButton" class="md:hidden">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
             </div>
-            {% endif %}
+            
+            <!-- Mobile menu -->
+            <div id="mobileMenu" class="hidden mt-3 space-y-2 md:hidden">
+                {% if 'user_id' in session %}
+                    <a href="{{ url_for('dashboard') }}" class="block py-2 hover:bg-blue-700 rounded px-2">Dashboard</a>
+                    <a href="{{ url_for('bookings') }}" class="block py-2 hover:bg-blue-700 rounded px-2">Bookings</a>
+                    {% if session.get('is_admin') %}
+                        <a href="{{ url_for('admin_bookings') }}" class="block py-2 hover:bg-blue-700 rounded px-2">Manage Bookings</a>
+                        <a href="{{ url_for('admin_users') }}" class="block py-2 hover:bg-blue-700 rounded px-2">Manage Users</a>
+                    {% endif %}
+                    <a href="{{ url_for('user_profile') }}" class="block py-2 hover:bg-blue-700 rounded px-2">My Profile</a>
+                    <a href="{{ url_for('logout') }}" class="block py-2 hover:bg-blue-700 rounded px-2">Logout</a>
+                {% endif %}
+            </div>
+            
+            <!-- Desktop menu -->
+            <div class="hidden md:flex md:items-center md:space-x-4">
+                {% if 'user_id' in session %}
+                    <a href="{{ url_for('dashboard') }}" class="py-2 hover:text-blue-200">Dashboard</a>
+                    <a href="{{ url_for('bookings') }}" class="py-2 hover:text-blue-200">Bookings</a>
+                    {% if session.get('is_admin') %}
+                        <a href="{{ url_for('admin_bookings') }}" class="py-2 hover:text-blue-200">Manage Bookings</a>
+                        <a href="{{ url_for('admin_users') }}" class="py-2 hover:text-blue-200">Manage Users</a>
+                    {% endif %}
+                    <a href="{{ url_for('user_profile') }}" class="py-2 hover:text-blue-200">My Profile</a>
+                    <a href="{{ url_for('logout') }}" class="py-2 hover:text-blue-200">Logout</a>
+                {% endif %}
+            </div>
         </div>
     </nav>
-
-  
 
     <div class="container mx-auto p-4">
         {% with messages = get_flashed_messages() %}
@@ -36,9 +60,18 @@
                 {% endfor %}
             {% endif %}
         {% endwith %}
-        
+
         {% block content %}{% endblock %}
     </div>
+
+    <script>
+        // Mobile menu toggle
+        const menuButton = document.getElementById('menuButton');
+        const mobileMenu = document.getElementById('mobileMenu');
+        
+        menuButton.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+    </script>
 </body>
 </html>
-

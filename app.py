@@ -143,8 +143,23 @@ def toggle_admin(user_id):
     return redirect(url_for('admin_users'))
 
 @app.route('/')
-def index():
-    return redirect(url_for('login'))
+def home():
+    return render_template('landing.html')
+@app.route('/pricing')
+def pricing():
+    return render_template('pricing.html')
+@app.route('/subscribe', methods=['POST'])
+def subscribe():
+    
+    try:
+        result = supabase.table('subscribers').insert({
+            'email': email
+        }).execute()
+        flash('Subscription successful!')
+    except Exception as e:
+        print(f"Subscription error: {str(e)}")
+        flash('Failed to subscribe')
+    return redirect(url_for('pricing'))
 @app.route('/logout')
 def logout():
     session.clear()  # Clear the session data
@@ -385,13 +400,15 @@ def admin_bookings():
         # Get all vehicles for the dropdown
         vehicles_result = supabase.table('vehicles').select('*').execute()
         
-        # Get all bookings with user and vehicle information
         bookings_result = supabase.table('bookings')\
-            .select(
-                '*, vehicles(*), profiles:user_id(*), user:user_id(email)'
-            )\
+            .select('*, vehicles(*)')\
             .order('created_at', desc=True)\
             .execute()
+        print("Bookings result:", bookings_result)  # Debug print
+
+        user_ids = [booking['user_id'] for booking in bookings_result.data]
+        print("User IDs:", user_ids)  # Debug print
+        users_result = supabase.auth.admin.users(user_ids)
 
         print("Bookings data:", bookings_result.data)  # Debug print
 
@@ -419,7 +436,7 @@ def admin_bookings():
 
     except Exception as e:
         print(f"Admin bookings error: {str(e)}")
-        flash('Error loading bookings', 'error')
+        flash('Error loading bookings ' + str(e), 'error')
         return render_template('admin_bookings.html', bookings=[], vehicles=[])
                             
     

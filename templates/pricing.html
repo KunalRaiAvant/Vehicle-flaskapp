@@ -1,0 +1,146 @@
+<!-- templates/pricing.html -->
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- Header -->
+    <div class="text-center py-16">
+        <h1 class="text-5xl font-bold text-gray-900">Pricing Plans</h1>
+        <p class="mt-6 text-lg text-gray-600 max-w-2xl mx-auto">
+            Start building for free, then add a site plan to go live. Account plans unlock additional features.
+        </p>
+    </div>
+
+    <!-- Billing Toggle -->
+    <div class="flex justify-center space-x-4 mb-12">
+        <button id="monthlyButton" class="bg-gray-900 text-white px-6 py-2 rounded">Monthly billing</button>
+        <button id="yearlyButton" class="text-gray-500 px-6 py-2 rounded">Yearly billing</button>
+    </div>
+
+    <!-- Pricing Cards -->
+    <div class="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
+        <!-- Startup -->
+        <div class="rounded-lg p-8 bg-gray-900 text-white hover:scale-105 transition-transform duration-300">
+            <h3 class="text-xl font-semibold mb-2">Startup</h3>
+            <p class="text-gray-400 mb-6">Perfect for small to medium businesses</p>
+            <ul class="text-gray-400 mb-6 space-y-3">
+                <li class="flex items-center">
+                    <svg class="w-5 h-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Up to 50 vehicles
+                </li>
+                <li class="flex items-center">
+                    <svg class="w-5 h-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Basic analytics
+                </li>
+                <li class="flex items-center">
+                    <svg class="w-5 h-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Email support
+                </li>
+            </ul>
+            <div class="mb-6">
+                <span class="text-4xl font-bold">$32</span>
+                <span class="text-gray-400">/month</span>
+            </div>
+            <form action="{{ url_for('subscribe') }}" method="POST">
+                <input type="hidden" name="plan_type" value="startup">
+                <input type="hidden" name="amount" value="32">
+                <input type="hidden" name="billing_period" value="monthly" class="billing-period">
+                <button type="submit" class="w-full bg-white text-gray-900 py-2 rounded-md hover:bg-gray-100">
+                    Subscribe
+                </button>
+            </form>
+        </div>
+
+        <!-- Enterprise -->
+        <div class="rounded-lg p-8 bg-gray-900 text-white border-2 border-blue-500 hover:scale-105 transition-transform duration-300">
+            <div class="absolute top-0 right-0 -translate-y-1/2 px-3 py-1 bg-blue-500 text-white text-sm rounded-full">
+                Most Popular
+            </div>
+            <h3 class="text-xl font-semibold mb-2">Enterprise</h3>
+            <p class="text-gray-400 mb-6">For large organizations and fleets</p>
+            <ul class="text-gray-400 mb-6 space-y-3">
+                <li class="flex items-center">
+                    <svg class="w-5 h-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Unlimited vehicles
+                </li>
+                <li class="flex items-center">
+                    <svg class="w-5 h-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Advanced analytics & reporting
+                </li>
+                <li class="flex items-center">
+                    <svg class="w-5 h-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    24/7 priority support
+                </li>
+                <li class="flex items-center">
+                    <svg class="w-5 h-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Custom integrations
+                </li>
+            </ul>
+            <div class="mb-6">
+                <span class="text-4xl font-bold">$48</span>
+                <span class="text-gray-400">/month</span>
+            </div>
+            <form action="{{ url_for('subscribe') }}" method="POST">
+                <input type="hidden" name="plan_type" value="enterprise">
+                <input type="hidden" name="amount" value="48">
+                <input type="hidden" name="billing_period" value="monthly" class="billing-period">
+                <button type="submit" class="w-full bg-white text-gray-900 py-2 rounded-md hover:bg-gray-100">
+                    Subscribe
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleBilling(period) {
+    const monthlyButton = document.getElementById('monthlyButton');
+    const yearlyButton = document.getElementById('yearlyButton');
+    const billingPeriodInputs = document.querySelectorAll('.billing-period');
+    const amountInputs = document.querySelectorAll('input[name="amount"]');
+    
+    if (period === 'yearly') {
+        monthlyButton.classList.remove('bg-gray-900', 'text-white');
+        monthlyButton.classList.add('text-gray-500');
+        yearlyButton.classList.remove('text-gray-500');
+        yearlyButton.classList.add('bg-gray-900', 'text-white');
+        
+        // Update all billing periods and calculate yearly amounts
+        billingPeriodInputs.forEach(input => input.value = 'yearly');
+        amountInputs.forEach(input => {
+            const monthlyAmount = parseFloat(input.value);
+            input.value = (monthlyAmount * 12 * 0.9).toString(); // 10% discount for yearly
+        });
+    } else {
+        yearlyButton.classList.remove('bg-gray-900', 'text-white');
+        yearlyButton.classList.add('text-gray-500');
+        monthlyButton.classList.remove('text-gray-500');
+        monthlyButton.classList.add('bg-gray-900', 'text-white');
+        
+        // Reset to monthly values
+        billingPeriodInputs.forEach(input => input.value = 'monthly');
+        amountInputs.forEach(input => {
+            const yearlyAmount = parseFloat(input.value);
+            input.value = (yearlyAmount / 12 / 0.9).toString();
+        });
+    }
+}
+
+// Add click handlers
+document.getElementById('monthlyButton').addEventListener('click', () => toggleBilling('monthly'));
+document.getElementById('yearlyButton').addEventListener('click', () => toggleBilling('yearly'));
+</script>
+{% endblock %}

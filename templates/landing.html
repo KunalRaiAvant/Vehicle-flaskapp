@@ -1,0 +1,74 @@
+<!-- templates/landing.html -->
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- Hero Section -->
+    <div class="text-center py-24">
+        <h1 class="text-5xl font-bold tracking-tight text-gray-900">
+            Manage Your Vehicle Fleet
+            <span class="block text-blue-600 mt-2">With Ease</span>
+        </h1>
+        <p class="mt-6 text-lg leading-8 text-gray-600 max-w-2xl mx-auto">
+            Streamline your vehicle management process with our comprehensive registration and booking system. Perfect for businesses of all sizes.
+        </p>
+        <div class="mt-10 flex items-center justify-center gap-x-6">
+            <a href="{{ url_for('pricing') }}" 
+               class="text-base bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                View Pricing Plans
+            </a>
+            <a href="{{ url_for('register') }}" 
+               class="text-xl font-bold bg-blue-600 text-white px-8 py-4 rounded-md hover:bg-blue-700 transform hover:scale-105 transition-all">
+                Get Started →
+            </a>
+        </div>
+    </div>
+
+    <!-- Key Features -->
+    <div class="text-center">
+        <h2 class="text-3xl font-bold text-gray-900">Key Features</h2>
+        <p class="mt-4 text-lg text-gray-600">Everything you need to manage your vehicles efficiently</p>
+    </div>
+
+    <div class="mt-16 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+        <!-- Easy Registration -->
+        <div class="text-center">
+            <div class="flex justify-center items-center h-12 w-12 mx-auto bg-blue-600 text-white rounded-lg">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+            </div>
+            <h3 class="mt-6 text-lg font-medium text-gray-900">Easy Registration</h3>
+            <p class="mt-2 text-gray-600">Quick and simple vehicle registration process</p>
+        </div>
+
+        <!-- Booking Management -->
+        <div class="text-center">
+            <div class="flex justify-center items-center h-12 w-12 mx-auto bg-blue-600 text-white rounded-lg">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+            </div>
+            <h3 class="mt-6 text-lg font-medium text-gray-900">Booking Management</h3>
+            <p class="mt-2 text-gray-600">Efficient booking and scheduling system</p>
+        </div>
+
+        <!-- Analytics & Reports -->
+        <div class="text-center">
+            <div class="flex justify-center items-center h-12 w-12 mx-auto bg-blue-600 text-white rounded-lg">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+            </div>
+            <h3 class="mt-6 text-lg font-medium text-gray-900">Analytics & Reports</h3>
+            <p class="mt-2 text-gray-600">Detailed insights and reporting tools</p>
+        </div>
+    </div>
+</div>
+<footer class="bg-gray-100 py-4 mt-auto">
+    <div class="max-w-7xl mx-auto px-4">
+        <div class="text-center text-gray-600 text-sm">
+            © 2025 Vehicle Registry. All rights reserved.
+        </div>
+    </div>
+</footer>
+{% endblock %}
